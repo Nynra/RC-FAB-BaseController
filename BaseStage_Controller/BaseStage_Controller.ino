@@ -2009,7 +2009,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         ystage.move(REV,MOT_ZERO_SPD);  
                         while(ystage.busyCheck());                    // board not busy check 
-                        END_POS_Y =  ystage.getPos();  
+                        END_POS_Y =  0;  
                         while(ystage.busyCheck());                    // board not busy check 
                 
                       }
@@ -2017,7 +2017,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         ystage.move(FWD,MOT_ZERO_SPD);  
                         while(ystage.busyCheck());                    // board not busy check 
-                        END_POS_Y =  ystage.getPos(); 
+                        END_POS_Y =  0; 
                         while(ystage.busyCheck());                    // board not busy check 
                       
                       } 
@@ -2183,7 +2183,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         xstage.move(REV,MOT_ZERO_SPD);  
                         while(xstage.busyCheck());                    // board not busy check 
-                        END_POS_X =  xstage.getPos();  
+                        END_POS_X =  0;  
                         while(xstage.busyCheck());                    // board not busy check 
                         
                       }
@@ -2191,7 +2191,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         xstage.move(FWD,MOT_ZERO_SPD);  
                         while(xstage.busyCheck());                    // board not busy check 
-                        END_POS_X =  xstage.getPos(); 
+                        END_POS_X =  0; 
                         while(xstage.busyCheck());                    // board not busy check 
                         
                       } 
