@@ -2742,7 +2742,10 @@ void CheckSerialRXD()
                   case 'r':                           // r = reset controller, small r, resets the Arduino but no NVM erase
                     Serial.println();                 // spacer
                     Serial.println("r OK ");          // reply ACK to GUI
-                   // while(xstage.busyCheck());      // board not busy check
+                    // while(xstage.busyCheck());      // board not busy check
+                    X_INIT_DONE = 0;
+                    Y_INIT_DONE = 0;
+                    Z_INIT_DONE = 0;
                     xstage.resetDev();                // Reset stepper driver board
                     delay(50);                        // wait before resetting Arduino
                     //while(ystage.busyCheck());      // board not busy check
