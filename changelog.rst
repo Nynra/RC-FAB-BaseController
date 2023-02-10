@@ -35,3 +35,11 @@ Changed
 - Fixed some issues with setting the manual end position and homing to the center instead of zero position
   (Z still homes and zeros to the zero position)
 
+V1.0.3
+--------
+
+Changed
+^^^^^^^^^^
+- Added auto status updating function
+
+

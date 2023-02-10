@@ -338,6 +338,8 @@ const long UPD_MOT_INTVAL     = 10;             // update motor interval in msec
 const long UPD_PLT_INTVAL     = 30000;          // plotter interval in msecs -- 30000 mS ==> 30 secs
 const long UPD_RTD_INTVAL     = 100;            // RTD temp sensor read interval in msecs  ==> 100 = 10Hz (!max 16Hz for MAX31865)
 const long UPD_SIG_INTVAL     = 250;            // ERR LED FLASH INTERVAL (flash speed in msecs)
+const long UPD_SFB_INTVAL     = 250;            // STATUS FEEDBACK interval 
+
 
 const int ADC_ZERO_OFFSET     = 0;              // Offset to zero ADC in ADC steps
 const int ADC_mV_OFFSET       = 0;              // Offset in mV for 0-5000 mV range, (default = 0 mV)
@@ -397,6 +399,7 @@ double SP_COOL                = 0;               // Temperature setpoint(SP_TEMP
 double CV_HEAT                = 0.0;             // Command value (CV) temperature(in deg C)  => 2 decimal rounding and use point as decimal separator
 double CV_COOL                = 0.0;             // Command value (CV) temperature(in deg C)  => 2 decimal rounding and use point as decimal separator
 int CV_TEC                    = 0;               // Command value (CV) temperature(in deg C)  => 2 decimal rounding and use point as decimal separator
+bool EN_SFB                   = 1;               // Enable Status feeback (SFB)
 
 
 // ERROR STATUS BITS:
@@ -501,9 +504,15 @@ int PSU_MOT_VAL = 0;                        // power supply motor ADC value
 int PSU_TCO_VAL  = 0;                       // power supply temp controller ADC value
 bool RUN_STATE = 0;                         // Holds state for RUN led signaling
 bool SUCTIONMODE = 0;                       // Holds suction mode state (suction air pump), 0=OFF, 1=ON
+
+
 float VELOCITY_X_CMD = 0;                   // Holds velocity command stage X
 float VELOCITY_Y_CMD = 0;                   // Holds velocity command stage Y
 float VELOCITY_Z_CMD = 0;                   // Holds velocity command stage Z
+
+float JOG_X_CMD = 0;                   // Holds velocity command stage X
+float JOG_Y_CMD = 0;                   // Holds velocity command stage Y
+float JOG_Z_CMD = 0;                   // Holds velocity command stage Z
 
 
 // ST POWERSTEP STATUS BITS (Powerstep01 manual page 71)
@@ -571,6 +580,12 @@ int ZERO_DONE           = 0;                // Flag to block all goto untill a z
 int RXD_SET_VAL         = 0;
 
 
+// New Jog motion
+int X_Jog_Size = 1;                         // stepsize var for move command in steps
+int Y_Jog_Size = 1;                         // stepsize var for move command in steps
+int Z_Jog_Size = 1;                         // stepsize var for move command in steps
+
+
 float TC_TEMP_CAL = 0;                      // Calculated thermocouple temp
 long TC_TEMP_RAW  = 0;                      // Thermocouple ADC value ()
 
@@ -630,6 +645,7 @@ volatile long UPD_SIG_CNT = 0;                     // Counter/timer for err flas
 volatile long MOVE_TMR_X  = 0;                     // move timer (mSecs) for Xstage 
 volatile long MOVE_TMR_Y  = 0;                     // move timer (mSecs) for Ystage 
 volatile long MOVE_TMR_Z  = 0;                     // move timer (mSecs) for Zstage 
+volatile long UPD_SFB_CNT = 0;                     // status feedback timer
 long uptime = 0;                                   // holds device runtime in seconds from startup
 
 int DRIVE_DIR    = 0;                              // Holds drive direction state
@@ -1226,9 +1242,9 @@ void setup()
     END_POS_Y = Y_MAN_ENDPOS;                // Holds stage end position (mark) in steps from 0 point, this value is set in ZeroStage()
     END_POS_Z = Z_MAN_ENDPOS;                // Holds stage end position (mark) in steps from 0 point, this value is set in ZeroStage()                      
 
-    X_INIT_DONE = 1;         // testing only, commnent out for application
-    Y_INIT_DONE = 1;         // testing only, commnent out for application
-    Z_INIT_DONE = 1;         // testing only, commnent out for application
+   // X_INIT_DONE = 1;         // testing only, commnent out for application
+   // Y_INIT_DONE = 1;         // testing only, commnent out for application
+   // Z_INIT_DONE = 1;         // testing only, commnent out for application
   }
 
   if(CHK_OFS_ON_INIT)
@@ -2009,7 +2025,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         ystage.move(REV,MOT_ZERO_SPD);  
                         while(ystage.busyCheck());                    // board not busy check 
-                        END_POS_Y =  0;  
+                        END_POS_Y =  ystage.getPos();  
                         while(ystage.busyCheck());                    // board not busy check 
                 
                       }
@@ -2017,7 +2033,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         ystage.move(FWD,MOT_ZERO_SPD);  
                         while(ystage.busyCheck());                    // board not busy check 
-                        END_POS_Y =  0; 
+                        END_POS_Y =  ystage.getPos(); 
                         while(ystage.busyCheck());                    // board not busy check 
                       
                       } 
@@ -2183,7 +2199,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         xstage.move(REV,MOT_ZERO_SPD);  
                         while(xstage.busyCheck());                    // board not busy check 
-                        END_POS_X =  0;  
+                        END_POS_X =  xstage.getPos();  
                         while(xstage.busyCheck());                    // board not busy check 
                         
                       }
@@ -2191,7 +2207,7 @@ void ZeroStage()                                // Usually only called once per 
                       {
                         xstage.move(FWD,MOT_ZERO_SPD);  
                         while(xstage.busyCheck());                    // board not busy check 
-                        END_POS_X =  0; 
+                        END_POS_X =  xstage.getPos(); 
                         while(xstage.busyCheck());                    // board not busy check 
                         
                       } 
@@ -2742,10 +2758,7 @@ void CheckSerialRXD()
                   case 'r':                           // r = reset controller, small r, resets the Arduino but no NVM erase
                     Serial.println();                 // spacer
                     Serial.println("r OK ");          // reply ACK to GUI
-                    // while(xstage.busyCheck());      // board not busy check
-                    X_INIT_DONE = 0;
-                    Y_INIT_DONE = 0;
-                    Z_INIT_DONE = 0;
+                   // while(xstage.busyCheck());      // board not busy check
                     xstage.resetDev();                // Reset stepper driver board
                     delay(50);                        // wait before resetting Arduino
                     //while(ystage.busyCheck());      // board not busy check
@@ -3496,9 +3509,22 @@ void CheckSerialRXD()
                               Serial.println("*");                          // bad entry response
                             }
                           break;   // end case 'u'
-                          
 
-                          case 'v':  // (Manual) Velocity control
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           case 'j':  // (Manual) Jog control
                             Serial.println();                               // Spacer
                             rx_str = rx_str.substring(3);                   // strip off first 2 chars
                             SER_RXD_VAL = rx_str.toInt();                   // assign newly rxd data to SER_RXD_VAL
@@ -3512,12 +3538,12 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("svx OK ");                    // reply ACK to GUI
+                                          Serial.println("sjx OK ");                    // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                  // Echo param data, optional 
                                           //VELOCITY_X_CMD = float(SER_RXD_VAL)/116;      // divide input value to obtain decimal value
                                           VELOCITY_X_CMD = float(SER_RXD_VAL);      // divide input value to obtain decimal value
-                                          Serial.print("VELOCITY_X_CMD: ");             // Testing reply ACK to GUI
-                                          Serial.println(VELOCITY_X_CMD);               // Testing ony  
+                                         // Serial.print("VELOCITY_X_CMD: ");             // Testing reply ACK to GUI
+                                         // Serial.println(VELOCITY_X_CMD);               // Testing ony  
                                           SET_VELO_X = 1;  
       
                                           if((VELOCITY_X_CMD > 0) && (VELOCITY_X_CMD < 1))
@@ -3554,7 +3580,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("svy OK ");                      // reply ACK to GUI
+                                          Serial.println("sjy OK ");                      // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
                                           VELOCITY_Y_CMD = float(SER_RXD_VAL);        // divide input value to obtain decimal value
                                           //VELOCITY_Y_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
@@ -3599,7 +3625,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("svz OK ");                      // reply ACK to GUI
+                                          Serial.println("sjz OK ");                      // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
                                           VELOCITY_Z_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
                                          // Serial.print("VELOCITY_Z_CMD: ");             // Testing reply ACK to GUI
@@ -3645,9 +3671,246 @@ void CheckSerialRXD()
                              Serial.println("Stage has not been zeroed, zero stage first [z] before attempting motion commands... ");      // bad requestlong  ACK
                              //Serial.println("*");      // bad request short ACK
                           }
+                          break;   // case 'j':  // (Manual) Velocity control
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          
+                          
+
+                          case 'v':  // (Manual) Velocity control
+                            Serial.println();                               // Spacer
+                            rx_str = rx_str.substring(3);                   // strip off first 2 chars
+                            SER_RXD_VAL = rx_str.toInt();                   // assign newly rxd data to SER_RXD_VAL
+                           
+
+                            if((X_INIT_DONE) && (Y_INIT_DONE) && (Z_INIT_DONE))                                 // check if stage has been zeroed ==>  yes, goto pos , NO, error ack
+                            {
+                                  switch(rx_arr[2])
+                                  {
+                                    case 'x': // X-stage
+      
+                                        if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
+                                        {
+                                          Serial.println("svx OK ");                    // reply ACK to GUI
+                                          Serial.println(SER_RXD_VAL);                  // Echo param data, optional 
+                                          //VELOCITY_X_CMD = float(SER_RXD_VAL)/116;      // divide input value to obtain decimal value
+                                          JOG_X_CMD = float(SER_RXD_VAL);      // divide input value to obtain decimal value
+                                         // Serial.print("JOG_X_CMD: ");             // Testing reply ACK to GUI
+                                         // Serial.println(JOG_X_CMD);               // Testing ony  
+                                          SET_VELO_X = 1;  
+      
+                                          if((JOG_X_CMD > 0) && (JOG_X_CMD < 1))
+                                          {
+                                            JOG_X_CMD = 1;
+                                          }
+      
+                                          if((JOG_X_CMD > -1) && (JOG_X_CMD < 0))
+                                          {
+                                            JOG_X_CMD = -1;
+                                          }
+      
+                                          if(JOG_X_CMD > 0)
+                                          {
+                                            xstage.move(FWD, JOG_X_CMD);              // run/dir/speed     
+                                          }
+                                          if(JOG_X_CMD < 0)
+                                          {
+                                            xstage.move(REV, abs(JOG_X_CMD));         // run/dir/speed  
+                                          }
+                                          
+                                          if(JOG_X_CMD == 0)
+                                          {
+                                            xstage.softStop();                            // STOP command
+                                          }                                                                  
+                                        }
+                                        else                                              // bad entry
+                                        {
+                                          Serial.println("*");                            // bad entry response
+                                        }
+                                     break; 
+      
+                                     case 'y': // Y-stage
+      
+                                        if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
+                                        {
+                                          Serial.println("svy OK ");                      // reply ACK to GUI
+                                          Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
+                                          JOG_Y_CMD = float(SER_RXD_VAL);        // divide input value to obtain decimal value
+                                          //VELOCITY_Y_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
+                                          //Serial.print("VELOCITY_Y_CMD: ");             // Testing reply ACK to GUI
+                                          //Serial.println(VELOCITY_Y_CMD);               // Testing ony 
+                                          SET_VELO_Y = 1; 
+      
+                                          if((JOG_Y_CMD > 0) && (JOG_Y_CMD < 1))
+                                          {
+                                            JOG_Y_CMD = 1;
+                                          }
+      
+                                          if((JOG_Y_CMD > -1) && (JOG_Y_CMD < 0))
+                                          {
+                                            JOG_Y_CMD = -1;
+                                          }
+                                          
+                                          if(JOG_Y_CMD > 0)
+                                          {
+                                            ystage.move(FWD, JOG_Y_CMD);            // run/dir/speed     
+                                          }
+                                          
+                                          if(VELOCITY_Y_CMD < 0)
+                                          {
+                                            ystage.move(REV, abs(JOG_Y_CMD));       // run/dir/speed  
+                                          }
+                                          
+                                          if(JOG_Y_CMD == 0)
+                                          {
+                                            ystage.softStop();                          // STOP command
+                                          }                                                                                                      
+                                        }
+                                        else // bad entry
+                                        {                                    
+                                          Serial.println("*");  // bad entry response
+                                         //Serial.print("VELOCITY_Y_CMD: ");             // Testing ...reply ACK to GUI
+                                         //Serial.println(VELOCITY_Y_CMD);               // Testing ony                     
+                                        }
+                                      break; 
+      
+                                      case 'z': // Z-stage
+      
+                                        if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
+                                        {
+                                          Serial.println("svz OK ");                      // reply ACK to GUI
+                                          Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
+                                          JOG_Z_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
+                                         // Serial.print("JOG_Z_CMD: ");             // Testing reply ACK to GUI
+                                         // Serial.println(JOG_Z_CMD);               // Testing ony 
+                                          SET_VELO_Z = 1;
+      
+                                          if((JOG_Z_CMD > 0) && (JOG_Z_CMD < 1))
+                                          {
+                                            JOG_Z_CMD = 1;
+                                          }
+      
+                                          if((JOG_Z_CMD > -1) && (JOG_Z_CMD < 0))
+                                          {
+                                            JOG_Z_CMD = -1;
+                                          }
+                                          
+                                          if(JOG_Z_CMD > 0)
+                                          {
+                                            zstage.move(FWD, JOG_Z_CMD);              // run/dir/speed     
+                                          }
+                                          
+                                          if(VELOCITY_Z_CMD < 0)
+                                          {
+                                            zstage.move(REV, abs(JOG_Z_CMD));         // run/dir/speed  
+                                          }
+                                          
+                                          if(JOG_Z_CMD == 0)
+                                          {
+                                            xstage.softStop();                            // STOP command
+                                          }                                                                                                       
+                                        }
+                                        else // bad entry
+                                        {
+                                          Serial.println("*");                            // bad entry response
+                                        }
+                                      break;  // end case z 
+                               
+                               }                              
+                               break;         // end  switch(rx_arr[2])
+                          }                    
+                          else
+                          {
+                             Serial.println("Stage has not been zeroed, zero stage first [z] before attempting motion commands... ");      // bad requestlong  ACK
+                             //Serial.println("*");      // bad request short ACK
+                          }
                           break;   // case 'v':  // (Manual) Velocity control
+
+                          
                         
-                  }                 //  end  switch(rx_arr[1])
+                  }//  end  switch(rx_arr[1])
                   break;   
 
 
@@ -4277,7 +4540,7 @@ void UpdateActors()
         ystage.softStop();                               // soft stop prevents errors in the next operation
         while(zstage.busyCheck());                       // wait until driver is not busy anymore
         zstage.softStop();                               // soft stop prevents errors in the next operatio
-        bitWrite(GLOBAL_ERR,0,1);
+        bitWrite(GLOBAL_ERR,1,1);
         RUNMODE   = 0;                                   // put controller into stopmode
         FORCE_CLR = 0;                                   // FORCE cooler/TEC OFF when in stopmode
         FORCE_HTR = 0;                                   // FORCE heater OFF when in stopmode
@@ -4288,12 +4551,15 @@ void UpdateActors()
         if(ESTOP_SET == 1)
         {
             if((PSU_MOT_VAL > 200) && (PSU_TCO_VAL > 200))  //Typical values around 800/1024-ish for 24Vdc PSU
-            bitWrite(GLOBAL_ERR,0,0);                       // RESET ESTOP ERROR FLAG
-            ESTOP_CNT++;                                    // Increment ESTOP counter
-            xstage.getStatus();                             // get status from driver board, this get clears error flags
-            ystage.getStatus();                             // get status from driver board, this get clears error flags
-            zstage.getStatus();                             // get status from driver board, this get clears error flags
-            ESTOP_SET = 0;                                  // RESET ESTOP SET FLAG 
+            {
+              bitWrite(GLOBAL_ERR,1,0);                       // RESET ESTOP ERROR FLAG
+              ESTOP_CNT++;                                    // Increment ESTOP counter
+              xstage.getStatus();                             // get status from driver board, this get clears error flags
+              ystage.getStatus();                             // get status from driver board, this get clears error flags
+              zstage.getStatus();                             // get status from driver board, this get clears error flags
+              ESTOP_SET = 0;                                  // RESET ESTOP SET FLAG 
+            }
+               
          }
      }
 
@@ -4304,11 +4570,13 @@ void UpdateActors()
      if(PSU_CHK_VOLTAGE < 9000) // PSU is aprox 24Vdc so 9000mV/9Vdc is safe threshold
      {
        PWR_ERR = 1;
+       bitWrite(GLOBAL_ERR,0,1);                       // RESET ESTOP ERROR FLAG
        digitalWrite(PWR_LED, LOW);               // ENERGIZE TEC module
      }
      else
      {
        PWR_ERR = 0;
+       bitWrite(GLOBAL_ERR,0,0);                       // RESET ESTOP ERROR FLAG
        digitalWrite(PWR_LED, HIGH);               // ENERGIZE TEC module
      }
      
@@ -4321,11 +4589,13 @@ void UpdateActors()
     
       if((!XSTAGE_STATUS) && (!XSTAGE_STATUS) && (!XSTAGE_STATUS) && (!PWR_ERR))
       {
+        bitWrite(GLOBAL_ERR,5,1);                       // RESET ESTOP ERROR FLAG
         MOT_ERR = 1;
        
       }
       else
       {
+        bitWrite(GLOBAL_ERR,5,0);                       // RESET ESTOP ERROR FLAG
         MOT_ERR = 0;       
       }
      
@@ -4442,6 +4712,21 @@ void DebugPrint()             // contains moutiple debug modes
       uptime++;               // increment uptime timer (1 sec tick)
       MSEC_CNT = 0;           // reset millisec timer
    }
+
+
+
+
+   // status feebback routine
+   if(UPD_SFB_CNT > UPD_DBG_INTVAL && EN_SFB)
+   {
+     Serial.println("SFB");           // header
+     Serial.println(CUR_POS_MOT_X);      //
+     Serial.println(CUR_POS_MOT_Y);
+     //Serial.println(CUR_POS_MOT_Z);
+     Serial.println(GLOBAL_ERR);    // global error word (int 16)
+
+      UPD_SFB_CNT = 0;
+   }
   
     if(DBG_MODE > 0)          // DBG_MODE ==> 0=OFF, 1=PRINT-OUT, 2=PLOTTER
     {
@@ -4462,11 +4747,6 @@ void DebugPrint()             // contains moutiple debug modes
             Serial.println(ZERO_ERR); 
              Serial.print("TC_ERR: "); 
             Serial.println(TC_ERR); 
-
-          
-               
-
-
 
            
             Serial.print("PSU Voltage: "); 
@@ -4651,6 +4931,7 @@ ISR(TIMER1_OVF_vect)        // ISR label for Timer1
   UPD_TEC_TMR++;            // update actor internal timer/counter
   UPD_TEC_CNT++;            // update TEC/PELTIER timer/counter
   UPD_SIG_CNT++;            // update err handler timer/counter
+  UPD_SFB_CNT++;            // update status feebback timer/counter
   MSEC_CNT++;               // update millisec timer
   MOVE_TMR_X++;             // Move/motion timer stepper X
   MOVE_TMR_Y++;             // Move/motion timer stepper Y
