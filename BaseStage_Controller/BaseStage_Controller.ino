@@ -360,7 +360,7 @@ const float max_stepper_speed = 500.00;         // max speed of stepper (steps/s
 const float min_stepper_speed = 0.005;          // Min stepper speed (steps/sec) 
 const int HOMING_STEP_SPD     = 800;            // speed when homing in steps/sec in run mode
 const float MAX_LIN_SPD       = 800.00;         // Maximum lineair speed in um/sec (e.g 1200 = 1200 uM/sec)
-const float MOT_ZERO_SPD      = 20000;            // Stepper motor speed when zero ing stages to end point/limits
+const float MOT_ZERO_SPD      = 250;            // Stepper motor speed when zero ing stages to end point/limits THIS IS NOT IN STEPS PER S
 
 
 // Temperature PID control params/settings 
@@ -381,7 +381,7 @@ const float RTD_T_OFFSET      = 0;               // RTD (PT100) temperature offs
 
 const int SLOW_SPD_THR        = 1750;            // slow speed threshold in steps/sec ==> lower than this speed, drive method will switch to slow speed
 const int MAX_JOG_STEP_SIZE   = 18;              // Maximum jog step size, for slow speed, step size @ 100 Hz (default 17), 17 ==> 1700 steps/sec @ 100 Hz update rate
-const float MAX_SS_SPD        = 56500;        // Max Steps/Sec speed
+const float MAX_SS_SPD        = 25601;        // Max Steps/Sec speed
 const float MIN_SS_SPD        = 100.00;          // slowest possible speed, 1 step per iteration @ 100 Hz ==> 100 steps/sec
 
 const long X_CENTER_POS       = 627500;
@@ -399,7 +399,7 @@ double SP_COOL                = 0;               // Temperature setpoint(SP_TEMP
 double CV_HEAT                = 0.0;             // Command value (CV) temperature(in deg C)  => 2 decimal rounding and use point as decimal separator
 double CV_COOL                = 0.0;             // Command value (CV) temperature(in deg C)  => 2 decimal rounding and use point as decimal separator
 int CV_TEC                    = 0;               // Command value (CV) temperature(in deg C)  => 2 decimal rounding and use point as decimal separator
-bool EN_SFB                   = 1;               // Enable Status feeback (SFB)
+bool EN_SFB                   = 0;               // Enable Status feeback (SFB)
 
 
 // ERROR STATUS BITS:
@@ -1895,9 +1895,9 @@ void ZeroStage()                                // Usually only called once per 
     ystage.getStatus();              // get status from driver board, this get clears error flags
     zstage.getStatus();              // get status from driver board, this get clears error flags
 
-    xstage.setMaxSpeed(SET_SPD_X);    // max speed in units of full steps/s 
-    ystage.setMaxSpeed(SET_SPD_Y);    // max speed in units of full steps/s 
-    zstage.setMaxSpeed(SET_SPD_Z);    // max speed in units of full steps/s 
+    xstage.setMaxSpeed(MOT_ZERO_SPD);    // max speed in units of full steps/s 
+    ystage.setMaxSpeed(MOT_ZERO_SPD);    // max speed in units of full steps/s 
+    zstage.setMaxSpeed(MOT_ZERO_SPD);    // max speed in units of full steps/s 
 
     delay(10);
 
@@ -3524,7 +3524,7 @@ void CheckSerialRXD()
 
 
 
-                           case 'j':  // (Manual) Jog control
+                           case 'v':  // (Manual) Jog control
                             Serial.println();                               // Spacer
                             rx_str = rx_str.substring(3);                   // strip off first 2 chars
                             SER_RXD_VAL = rx_str.toInt();                   // assign newly rxd data to SER_RXD_VAL
@@ -3538,7 +3538,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("sjx OK ");                    // reply ACK to GUI
+                                          Serial.println("svx OK ");                    // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                  // Echo param data, optional 
                                           //VELOCITY_X_CMD = float(SER_RXD_VAL)/116;      // divide input value to obtain decimal value
                                           VELOCITY_X_CMD = float(SER_RXD_VAL);      // divide input value to obtain decimal value
@@ -3580,7 +3580,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("sjy OK ");                      // reply ACK to GUI
+                                          Serial.println("svy OK ");                      // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
                                           VELOCITY_Y_CMD = float(SER_RXD_VAL);        // divide input value to obtain decimal value
                                           //VELOCITY_Y_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
@@ -3625,7 +3625,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("sjz OK ");                      // reply ACK to GUI
+                                          Serial.println("svz OK ");                      // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
                                           VELOCITY_Z_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
                                          // Serial.print("VELOCITY_Z_CMD: ");             // Testing reply ACK to GUI
@@ -3759,7 +3759,7 @@ void CheckSerialRXD()
                           
                           
 
-                          case 'v':  // (Manual) Velocity control
+                          case 'j':  // (Manual) Velocity control
                             Serial.println();                               // Spacer
                             rx_str = rx_str.substring(3);                   // strip off first 2 chars
                             SER_RXD_VAL = rx_str.toInt();                   // assign newly rxd data to SER_RXD_VAL
@@ -3773,7 +3773,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("svx OK ");                    // reply ACK to GUI
+                                          Serial.println("sjx OK ");                    // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                  // Echo param data, optional 
                                           //VELOCITY_X_CMD = float(SER_RXD_VAL)/116;      // divide input value to obtain decimal value
                                           JOG_X_CMD = float(SER_RXD_VAL);      // divide input value to obtain decimal value
@@ -3815,7 +3815,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("svy OK ");                      // reply ACK to GUI
+                                          Serial.println("sjy OK ");                      // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
                                           JOG_Y_CMD = float(SER_RXD_VAL);        // divide input value to obtain decimal value
                                           //VELOCITY_Y_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
@@ -3860,7 +3860,7 @@ void CheckSerialRXD()
       
                                         if((SER_RXD_VAL > -(MAX_SS_SPD)) && (SER_RXD_VAL < MAX_SS_SPD) && (RUNMODE == 1)) // do value OK/ in range check
                                         {
-                                          Serial.println("svz OK ");                      // reply ACK to GUI
+                                          Serial.println("sjz OK ");                      // reply ACK to GUI
                                           Serial.println(SER_RXD_VAL);                    // Echo param data, optional 
                                           JOG_Z_CMD = float(SER_RXD_VAL)/116;        // divide input value to obtain decimal value
                                          // Serial.print("JOG_Z_CMD: ");             // Testing reply ACK to GUI
