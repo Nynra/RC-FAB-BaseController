@@ -38,8 +38,21 @@ Changed
 V1.0.3
 --------
 
+Added
+^^^^^^^^^^
+- Jogging function
+
+.. warning::
+    The jogging function on the base controller is not the same as jogging in the stacking system. Jogging in this case means
+    a relative move of a predetermined distance.
+
 Changed
 ^^^^^^^^^^
-- Added auto status updating function
+- Added auto status updating function (has not yet been enabled)
+- Changed the zero speed to 500 
+
+.. warning::
+    The zero speed is not given in steps/s, it is unknown which unit it is given in, but 500 seems to be a safe speed of around
+    25600 steps/s (1 Hz).
 
 
