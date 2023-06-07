@@ -55,4 +55,10 @@ Changed
     The zero speed is not given in steps/s, it is unknown which unit it is given in, but 500 seems to be a safe speed of around
     25600 steps/s (1 Hz).
 
+V1.0.3
+------------
+
+Changed
+^^^^^^^^^^^^^^
+- Updated the cooling and heating PID parameters to reduce overshoot, still has to be performance tested
 

@@ -364,15 +364,15 @@ const float MOT_ZERO_SPD      = 250;            // Stepper motor speed when zero
 
 
 // Temperature PID control params/settings 
-const double KP_HEAT          = 40.00;           // Kp: proportional tuning parameter for temperature
-const double KI_HEAT          = 2.0;             // Ki: integral tuning parameter for temperature
+const double KP_HEAT          = 25.00;           // Kp: proportional tuning parameter for temperature
+const double KI_HEAT          = 1.0;             // Ki: integral tuning parameter for temperature
 const double KD_HEAT          = 0.02;            // Kd: derivative tuning parameter for temperature
 const int GAIN_HTR            = 100;             // PWM scaler for HEATER actor (0-100%), eg: 50 = 50% of PWM value applied to [OUT_HEAT]
 const int MAX_PWM_HTR         = 250;             // limit for clipping max PWM 
 const double OFS_HTR          = 0;
 
-const double KP_COOL          = 40.00;           // Kp: proportional tuning parameter for temperature
-const double KI_COOL          = 2.0;             // Ki: integral tuning parameter for temperature
+const double KP_COOL          = 25.00;           // Kp: proportional tuning parameter for temperature
+const double KI_COOL          = 1.0;             // Ki: integral tuning parameter for temperature
 const double KD_COOL          = 0.02;            // Kd: derivative tuning parameter for temperature
 const int GAIN_TEC            = 100;             // PWM scaler for HEATER actor (0-100%), eg: 50 = 50% of PWM value applied to [OUT_HEAT]
 const int MAX_PWM_TEC         = 240;             // limit for clipping max PWM in case of overheating the firerod at 36V (overvoltage use). 
